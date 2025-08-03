@@ -163,6 +163,7 @@ export const errors = {
 		"Cannot index a method without calling it!",
 		suggestion("Use the form `() => a.b()` instead of `a.b`."),
 	),
+	noComparisonOfMethodSignatures: error("Cannot compare statically indexed method signatures."),
 	noCommentDirectives: error(
 		"Usage of `@ts-ignore`, `@ts-expect-error`, and `@ts-nocheck` are not supported!",
 		"roblox-ts needs type and symbol info to compile correctly.",

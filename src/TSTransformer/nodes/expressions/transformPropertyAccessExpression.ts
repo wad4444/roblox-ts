@@ -1,11 +1,15 @@
 import luau from "@roblox-ts/luau-ast";
+import { errors } from "Shared/diagnostics";
 import { TransformState } from "TSTransformer";
+import { DiagnosticService } from "TSTransformer/classes/DiagnosticService";
 import { transformOptionalChain } from "TSTransformer/nodes/transformOptionalChain";
-import { addIndexDiagnostics } from "TSTransformer/util/addIndexDiagnostics";
 import { convertToIndexableExpression } from "TSTransformer/util/convertToIndexableExpression";
 import { getConstantValueLiteral } from "TSTransformer/util/getConstantValueLiteral";
+import { isMethod } from "TSTransformer/util/isMethod";
+import { isValidMethodIndexWithoutCall } from "TSTransformer/util/isValidMethodIndexWithoutCall";
 import { skipUpwards } from "TSTransformer/util/traversal";
 import { validateNotAnyType } from "TSTransformer/util/validateNotAny";
+import { wrapMethodCall } from "TSTransformer/util/wrapMethodCall";
 import ts from "typescript";
 
 export function transformPropertyAccessExpressionInner(
@@ -17,9 +21,16 @@ export function transformPropertyAccessExpressionInner(
 	// a in a.b
 	validateNotAnyType(state, node.expression);
 
-	addIndexDiagnostics(state, node, state.typeChecker.getNonOptionalType(state.getType(node)));
+	if (ts.isPrototypeAccess(node)) {
+		DiagnosticService.addDiagnostic(errors.noPrototype(node));
+	}
 
-	if (ts.isDeleteExpression(skipUpwards(node).parent)) {
+	const topNode = skipUpwards(node);
+	if (ts.isBinaryExpression(topNode.parent)) {
+		DiagnosticService.addDiagnostic(errors.noComparisonOfMethodSignatures(topNode.parent));
+	}
+
+	if (ts.isDeleteExpression(topNode.parent)) {
 		state.prereq(
 			luau.create(luau.SyntaxKind.Assignment, {
 				left: luau.property(convertToIndexableExpression(expression), name),
@@ -28,6 +39,11 @@ export function transformPropertyAccessExpressionInner(
 			}),
 		);
 		return luau.none();
+	}
+
+	if (!isValidMethodIndexWithoutCall(state, skipUpwards(node)) && isMethod(state, node)) {
+		const propertyAccess = luau.property(convertToIndexableExpression(expression), name);
+		return wrapMethodCall(propertyAccess, propertyAccess.expression);
 	}
 
 	return luau.property(convertToIndexableExpression(expression), name);
