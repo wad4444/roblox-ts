@@ -26,10 +26,6 @@ export function transformPropertyAccessExpressionInner(
 	}
 
 	const topNode = skipUpwards(node);
-	if (ts.isBinaryExpression(topNode.parent)) {
-		DiagnosticService.addDiagnostic(errors.noComparisonOfMethodSignatures(topNode.parent));
-	}
-
 	if (ts.isDeleteExpression(topNode.parent)) {
 		state.prereq(
 			luau.create(luau.SyntaxKind.Assignment, {
@@ -42,6 +38,10 @@ export function transformPropertyAccessExpressionInner(
 	}
 
 	if (!isValidMethodIndexWithoutCall(state, skipUpwards(node)) && isMethod(state, node)) {
+		if (ts.isBinaryExpression(topNode.parent)) {
+			DiagnosticService.addDiagnostic(errors.noComparisonOfMethodSignatures(topNode.parent));
+		}
+
 		const propertyAccess = luau.property(convertToIndexableExpression(expression), name);
 		return wrapMethodCall(propertyAccess, propertyAccess.expression);
 	}
