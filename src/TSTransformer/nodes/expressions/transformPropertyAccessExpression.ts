@@ -37,11 +37,11 @@ export function transformPropertyAccessExpressionInner(
 		return luau.none();
 	}
 
-	if (!isValidMethodIndexWithoutCall(state, skipUpwards(node)) && isMethod(state, node)) {
-		if (ts.isBinaryExpression(topNode.parent)) {
-			DiagnosticService.addDiagnostic(errors.noComparisonOfMethodSignatures(topNode.parent));
-		}
+	if (ts.isBinaryExpression(topNode.parent) && isMethod(state, node)) {
+		DiagnosticService.addDiagnostic(errors.noComparisonOfMethodSignatures(topNode.parent));
+	}
 
+	if (!isValidMethodIndexWithoutCall(state, topNode) && isMethod(state, node)) {
 		const propertyAccess = luau.property(convertToIndexableExpression(expression), name);
 		return wrapMethodCall(propertyAccess, propertyAccess.expression);
 	}
